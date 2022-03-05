@@ -341,7 +341,7 @@ they think of themselves, but what care they for the world? what can it
 know about the matter?
 
 One of these lucky beings was neighbour Hans. Seven long years he had
-worked hard for his master. At last he said, 'Master, my time is up; I
+worked hard for his master. At last he said, 'server.Master, my time is up; I
 must go home and see my poor mother once more: so pray pay me my wages
 and let me go.' And the master said, 'You have been a faithful and good
 servant, Hans, so your pay shall be handsome.' Then he gave him a lump
@@ -690,7 +690,7 @@ is all this about?' 'Why,' said the cock, 'I was just now saying that
 we should have fine weather for our washing-day, and yet my mistress and
 the cook don't thank me for my pains, but threaten to cut off my
 head tomorrow, and make broth of me for the guests that are coming
-on Sunday!' 'Heaven forbid!' said the ass, 'come with us Master
+on Sunday!' 'Heaven forbid!' said the ass, 'come with us server.Master
 Chanticleer; it will be better, at any rate, than staying here to have
 your head cut off! Besides, who knows? If we care to sing in tune, we
 may get up some kind of a concert; so come along with us.' 'With all my
@@ -3622,7 +3622,7 @@ for all the riches in the world.'
 Then they hugged and kissed their dear little son, and gave him plenty
 to eat and drink, for he was very hungry; and then they fetched new
 clothes for him, for his old ones had been quite spoiled on his journey.
-So Master Thumb stayed at home with his father and mother, in peace; for
+So server.Master Thumb stayed at home with his father and mother, in peace; for
 though he had been so great a traveller, and had done and seen so many
 fine things, and was fond enough of telling the whole story, he always
 agreed that, after all, there's no place like HOME!
@@ -4832,7 +4832,7 @@ the middle, his companion took up his fiddle and played away, and the
 miser began to dance and spring about, capering higher and higher in
 the air. The thorns soon began to tear his clothes till they all hung
 in rags about him, and he himself was all scratched and wounded, so that
-the blood ran down. 'Oh, for heaven's sake!' cried the miser, 'Master!
+the blood ran down. 'Oh, for heaven's sake!' cried the miser, 'server.Master!
 master! pray let the fiddle alone. What have I done to deserve this?'
 'Thou hast shaved many a poor soul close enough,' said the other; 'thou
 art only meeting thy reward': so he played up another tune. Then the

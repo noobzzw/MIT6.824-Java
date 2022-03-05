@@ -4,11 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * key-value class
+ */
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class TaskFile {
-    private Integer status;
-    private String url;
-    private String fileName;
+@NoArgsConstructor
+public class Tuple2 {
+    private String key;
+    private String value;
 }

@@ -177,7 +177,7 @@ The Church
 
 Necessities
 
-Tom as a Sunday-School Hero    
+Tom as a Sunday-School Hero
 
 The Prize
 
@@ -207,7 +207,7 @@ Tom as an Artist
 
 Interrupted Courtship
 
-The Master
+The server.Master
 
 Vain Pleading
 
@@ -279,7 +279,7 @@ Taking Lessons
 
 The Pirates' Egg Market
 
-Tom Looking for Joe's Knife    
+Tom Looking for Joe's Knife
 
 The Thunder Storm
 
@@ -323,7 +323,7 @@ On Exhibition
 
 Prize Authors
 
-The Master's Dilemma
+The server.Master's Dilemma
 
 The School House
 

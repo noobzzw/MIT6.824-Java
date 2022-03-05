@@ -17,8 +17,8 @@ import java.io.IOException;
  */
 public class RpcEncoder extends MessageToByteEncoder {
 
-    private Class<?> clazz;
-    private RpcSerializer rpcSerializer;
+    private final Class<?> clazz;
+    private final RpcSerializer rpcSerializer;
 
     public RpcEncoder(Class<?> clazz, RpcSerializer rpcSerializer) {
         this.clazz = clazz;
@@ -28,9 +28,7 @@ public class RpcEncoder extends MessageToByteEncoder {
     @Override
     protected void encode(ChannelHandlerContext channelHandlerContext, Object o, ByteBuf byteBuf)
         throws Exception {
-
         if (clazz != null && clazz.isInstance(o)) {
-
             //将对象序列化成二进制数组
             byte[] bytes = rpcSerializer.serialize(o);
             //获取长度

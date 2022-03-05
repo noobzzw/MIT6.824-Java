@@ -5,6 +5,8 @@
 
 package rpc.io;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -15,6 +17,8 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.string.StringEncoder;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+
 import rpc.common.RpcDecoder;
 import rpc.common.RpcEncoder.JSONRpcSerializer;
 import rpc.common.RpcRequest;
@@ -54,17 +58,32 @@ public class RpcServer {
 
     private Object invoke(Object o) throws Exception {
         if (!(o instanceof RpcRequest)) {
-            throw new Exception("dam it!!!!");
+            throw new Exception("request type isn't match RpcRequest");
         }
         RpcRequest rpcRequest = (RpcRequest) o;
         Object serverObj = this;
         Class<?> serverClass = serverObj.getClass();
         String methodName = rpcRequest.getMethodName();
         Class<?>[] parameterTypes = rpcRequest.getParameterTypes();
-        Method method = serverClass.getDeclaredMethod(methodName, parameterTypes);
+        // 存储反序列化后的参数
+        Object[] parameters = new Object[0];
+        // 通过反射调用方法
+        Method method;
+        if (parameterTypes.length == 0) {
+            // 无参调用
+            method = serverClass.getDeclaredMethod(methodName);
+        } else {
+            // 有参调用
+            method = serverClass.getDeclaredMethod(methodName, parameterTypes);
+            // 处理传入参数，因为统一采用fastjson进行序列化，这里需要将json反序列化
+            parameters = new Object[parameterTypes.length];
+            for (int i = 0; i < parameterTypes.length; i++) {
+                final String parameter = rpcRequest.getParameters()[i].toString();
+                parameters[i] = JSON.parseObject(parameter,parameterTypes[i]);
+            }
+        }
         method.setAccessible(true);
-        Object[] parameters = rpcRequest.getParameters();
-        Object ret = method.invoke(serverObj, parameters);
-        return ret;
+        // 调用
+        return method.invoke(serverObj,parameters);
     }
 }

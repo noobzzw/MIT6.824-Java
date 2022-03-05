@@ -23,3 +23,6 @@
 hs_err_pid*
 .idea
 target
+# 中间数据和结果数据不上传
+reduce_result
+map_tmp

@@ -15,4 +15,5 @@ public class SampleServer extends RpcServer{
     public String foo(String s) {
         return "foo" + s;
     }
+
 }
