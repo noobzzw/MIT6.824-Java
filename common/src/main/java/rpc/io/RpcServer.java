@@ -6,7 +6,6 @@
 package rpc.io;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -16,19 +15,17 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.string.StringEncoder;
-import java.lang.reflect.Method;
-import java.util.Arrays;
-
 import rpc.common.RpcDecoder;
 import rpc.common.RpcEncoder.JSONRpcSerializer;
 import rpc.common.RpcRequest;
 import util.LogUtil;
 
-public class RpcServer {
+import java.lang.reflect.Method;
 
+public class RpcServer {
     /**
      * 启动这个 RPC 的网络服务
-     * @throws Exception
+     * @throws Exception netty server exception
      */
     public void serve(int port) throws Exception {
         NioEventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -39,7 +36,7 @@ public class RpcServer {
         serverBootstrap.channel(NioServerSocketChannel.class);
         serverBootstrap.childHandler(new ChannelInitializer<NioSocketChannel>() {
             @Override
-            protected void initChannel(NioSocketChannel nioSocketChannel) throws Exception {
+            protected void initChannel(NioSocketChannel nioSocketChannel) {
                 ChannelPipeline pipeline = nioSocketChannel.pipeline();
                 pipeline.addFirst(new StringEncoder());
                 pipeline.addLast(new RpcDecoder(RpcRequest.class, new JSONRpcSerializer()));
@@ -47,7 +44,10 @@ public class RpcServer {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object o)
                         throws Exception {
-                        ctx.writeAndFlush(invoke(o));
+                        if (o instanceof RpcRequest) {
+                            // 调用方法， o.getClass: RpcRequest
+                            ctx.writeAndFlush(invoke(o));
+                        }
                     }
                 });
             }

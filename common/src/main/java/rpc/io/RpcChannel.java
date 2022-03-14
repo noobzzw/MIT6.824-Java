@@ -13,15 +13,13 @@ import rpc.common.RpcRequest;
 
 /**
  * @author razertory
- * @date 2021/1/6
  */
-@Data
+@SuppressWarnings("rawtypes")
 public class RpcChannel extends ChannelInboundHandlerAdapter implements Callable {
-
     private ChannelHandlerContext context;
     private String result;
     private RpcRequest request;
-    private int serverPort;
+    private final int serverPort;
 
     public RpcChannel(int serverPort) {
         this.serverPort = serverPort;
@@ -43,8 +41,11 @@ public class RpcChannel extends ChannelInboundHandlerAdapter implements Callable
         wait();
         return result;
     }
-
     public void setRequest(RpcRequest request) {
         this.request = request;
+    }
+
+    public int getServerPort() {
+        return serverPort;
     }
 }

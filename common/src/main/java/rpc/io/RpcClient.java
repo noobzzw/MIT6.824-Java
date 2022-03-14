@@ -22,6 +22,7 @@ import util.LogUtil;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class RpcClient {
 
@@ -32,7 +33,16 @@ public class RpcClient {
         return call(port,methodName,null);
     }
 
-    public Object call(int port, String methodName, Object[] args) {
+
+    /**
+     * 进行方法调用
+     * @param port service port
+     * @param methodName 调用的方法
+     * @param args 方法入参
+     * @return Future，异步调用
+     */
+    @SuppressWarnings(value = {"unchecked", "rawtypes"})
+    public Future call(int port, String methodName, Object[] args) {
         RpcRequest request = new RpcRequest();
         request.setRequestId(UUID.randomUUID().toString());
         request.setMethodName(methodName);
@@ -49,14 +59,13 @@ public class RpcClient {
         rpcChannel.setRequest(request);
         try {
             bind(rpcChannel);
-            Object ret = executorService.submit(rpcChannel).get();
-            LogUtil.log("id: " + request.getRequestId() + " resp: " + ret + " req: " + request);
-            return ret;
+            return executorService.submit(rpcChannel);
         } catch (Exception e) {
             LogUtil.log("fail to call ");
         }
         return null;
     }
+
 
     private void bind(RpcChannel rpcChannel) throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup();
