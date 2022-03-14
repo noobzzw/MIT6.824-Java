@@ -52,7 +52,6 @@ public class FileUtil {
     /**
      * 删除整个文件夹下的文件和子文件夹
      * @param target 路径
-     * @throws IOException
      */
     public static void delete(Path target) throws IOException {
         if (Files.isDirectory(target)) {
@@ -73,7 +72,7 @@ public class FileUtil {
                             return super.postVisitDirectory(dir, exc);
                         }
                     });
-        } else {
+        } else if (Files.exists(target)){
             Files.delete(target);
         }
     }
