@@ -11,6 +11,8 @@ package common;
  */
 public class Cons {
     public static final Integer MASTER_HOST = 9090;
+    public static final Integer WORKER1_HOST = 9091;
+
 
     public static final Integer TASK_TYPE_NONE = 0;
     public static final Integer TASK_TYPE_MAP = 1;

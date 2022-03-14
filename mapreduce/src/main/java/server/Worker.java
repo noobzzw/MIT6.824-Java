@@ -1,6 +1,7 @@
 package server;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import common.Cons;
 import common.Task;
 import common.Tuple2;
@@ -9,15 +10,19 @@ import func.MapFuncImpl;
 import func.ReduceFunc;
 import func.ReduceFuncImpl;
 import rpc.io.RpcClient;
+import rpc.io.RpcServer;
 import util.FileUtil;
 import util.LogUtil;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
@@ -27,39 +32,69 @@ import java.util.stream.Collectors;
  * @author razertory
  * @date 2021/1/1
  */
-public class Worker {
+public class Worker extends RpcServer{
     private final Integer masterHost;
     private Integer mapNum;
     private final Integer reduceNum;
     // 预设10个线程同时处理数据
     private final ExecutorService threadPool = Executors.newFixedThreadPool(10);
+    private final MapFunc mapFunc;
+    private final ReduceFunc reduceFunc;
+    private  WorkerDto workerDto = new WorkerDto();
+    private static final Random random = new Random(System.currentTimeMillis());
+
 
     public Worker(Integer masterHost) {
         this.masterHost = masterHost;
         this.reduceNum = 10;
         this.mapNum = 0;
+        // 初始化map和reduceFunc
+        mapFunc = new MapFuncImpl();
+        reduceFunc = new ReduceFuncImpl();
+        // 开启一个rpc服务
+        // worker也需要一个rpcServer，用于接受master发出的请求(例如分发任务等等)
+        try {
+            serve(Cons.WORKER1_HOST+1);
+            // 初始化信息
+            workerDto = new WorkerDto(random.nextInt(10), InetAddress.getLocalHost().getHostAddress(), Cons.WORKER1_HOST+1);
+            // 向master进行注册
+            final String registerResult = new RpcClient().call(this.masterHost, "registerWorker", new Object[]{workerDto}).toString();
+            if ("success".equals(registerResult)) {
+                LogUtil.log("Worker: " + workerDto + " 注册成功！");
+            } else {
+                LogUtil.log("Worker: " + workerDto + " 注册失败！");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    public void work(MapFunc mapFunc, ReduceFunc reduceFunc) throws InterruptedException {
-        final RpcClient rpcClient = new RpcClient();
-        while (true) {
-            // 不断的与master进行心跳
-            Object o = rpcClient.call(masterHost, "assignTask");
-            Task currentTask = JSON.parseObject(o.toString(), Task.class);
-            if (currentTask.getType().equals(Cons.TASK_TYPE_MAP)) {
+
+    /**
+     * 接受master发送的任务请求
+     * 由master 进行rpc call
+     */
+    public String receiveTask(Task currentTask) {
+        LogUtil.log("接受到master的请求："+ currentTask);
+        // 分发请求
+        dispatchTask(currentTask);
+        return "success";
+    }
+
+    /**
+     * 按照任务类型进行分发任务
+     * @param currentTask 被分发的task
+     */
+    public void dispatchTask(Task currentTask) {
+        if (currentTask.getType().equals(Cons.TASK_TYPE_MAP)) {
                 doMap(currentTask, mapFunc::doMap);
-//                threadPool.submit(() -> doMap(currentTask, mapFunc::doMap));
-                mapNum++;
-            } else if (currentTask.getType().equals(Cons.TASK_TYPE_REDUCE)) {
+            threadPool.submit(() -> doMap(currentTask, mapFunc::doMap));
+            mapNum++;
+        } else if (currentTask.getType().equals(Cons.TASK_TYPE_REDUCE)) {
                 doReduce(currentTask, reduceFunc::doReduce);
-//                threadPool.submit(() ->doReduce(currentTask, reduceFunc::doReduce));
-            } else if (currentTask.getType().equals(Cons.TASK_TYPE_ALL_DONE)) {
-                LogUtil.log("Task Done, shutdown worker");
-                return;
-            } else {
-//                LogUtil.log("Receive incorrect work!");
-                Thread.sleep(2000);
-            }
+            threadPool.submit(() ->doReduce(currentTask, reduceFunc::doReduce));
+        } else if (currentTask.getType().equals(Cons.TASK_TYPE_ALL_DONE)) {
+            LogUtil.log("Task Done, shutdown worker");
         }
     }
 
@@ -68,7 +103,7 @@ public class Worker {
      * @param task 当前task
      * @param mapFunction 用户编写的map function
      */
-    private void doMap(Task task, BiFunction<String, String, List<Tuple2>> mapFunction) {
+    private void doMap(Task task, BiFunction<String, String, List<Tuple2<String,String>>> mapFunction) {
         /*
           intermediate：
           {
@@ -76,14 +111,14 @@ public class Worker {
             {(char,1),(char,1)}
           }
          */
-        List<List<Tuple2>> intermediate = new ArrayList<>();
+        List<List<Tuple2<String,String>>> intermediate = new ArrayList<>();
         for (int i = 0; i < this.reduceNum; i++) {
             intermediate.add(new ArrayList<>());
         }
         String content = FileUtil.readFileToString(task.getTaskFile().getUrl());
-        List<Tuple2> kvList = mapFunction.apply(task.getTaskFile().getFileName(), content);
+        List<Tuple2<String,String>> kvList = mapFunction.apply(task.getTaskFile().getFileName(), content);
 
-        for (Tuple2 kv : kvList) {
+        for (Tuple2<String,String> kv : kvList) {
             // partition
             intermediate.get(Math.abs(kv.getKey().hashCode()) % reduceNum).add(kv);
         }
@@ -109,8 +144,9 @@ public class Worker {
             }
             // 编写完成，告知mater
             final String callResult = new RpcClient()
-                    .call(Cons.MASTER_HOST, "doneMapTask", new Task[]{task})
-                    .toString();
+                    .call(masterHost, "doneMapTask", new Object[]{task, workerDto})
+                    .get().toString();
+            LogUtil.log("Map result " + callResult + " Done map");
             if (!"success".equals(callResult)) {
                 throw new Exception("map task finished, but master response failed");
             }
@@ -119,7 +155,7 @@ public class Worker {
         }
     }
 
-    private void doReduce(Task task, BiFunction<String, List<String>, Tuple2> reduceFunction) {
+    private void doReduce(Task task, BiFunction<String, List<String>, Tuple2<String,String>> reduceFunction) {
         // 创建结果文件
         Path filePath = Paths.get("reduce_result",String.format("reduce-%d",task.getId()));
         try {
@@ -128,7 +164,7 @@ public class Worker {
             e.printStackTrace();
         }
         // change file to (key,valueList)
-        final List<Tuple2> tmpResult = new ArrayList<>();
+        final List<Tuple2<String,String>> tmpResult = new ArrayList<>();
         for (int i=0; i<mapNum; i++) {
             /*
               原url ： map_tmp/mr-tmp-#-1
@@ -143,11 +179,11 @@ public class Worker {
             try {
                 final List<String> lines = Files.readAllLines(Paths.get(fileUrl));
                 // 先groupBy,获取key-valueList
-                final Map<String, List<Tuple2>> collect = lines.stream()
-                        .map(x -> new Tuple2(x.split(" ")[0], x.split(" ")[1]))
+                final Map<String, List<Tuple2<String,String>>> collect = lines.stream()
+                        .map(x -> new Tuple2<>(x.split(" ")[0], x.split(" ")[1]))
                         .collect(Collectors.groupingBy(Tuple2::getKey));
                 // 在把value的类型从List<Tuple>转换为List<Value>
-                for (Map.Entry<String, List<Tuple2>> keyValue : collect.entrySet()) {
+                for (Map.Entry<String, List<Tuple2<String,String>>> keyValue : collect.entrySet()) {
                     final List<String> valueList = keyValue.getValue()
                             .stream()
                             .map(Tuple2::getValue)
@@ -158,9 +194,10 @@ public class Worker {
                 e.printStackTrace();
             }
         } //end for
+
         // 进行总的reduce
         // list一直append，想着用链表更省空间
-        List<Tuple2> result = new LinkedList<>();
+        List<Tuple2<String,String>> result = new LinkedList<>();
         tmpResult.stream()
                 .collect(Collectors.groupingBy(Tuple2::getKey))
                 .forEach((k,v) -> {
@@ -169,7 +206,7 @@ public class Worker {
                 });
 
         try (FileWriter fw = new FileWriter(filePath.toFile(), true);){
-            for (Tuple2 kv : result) {
+            for (Tuple2<String,String> kv : result) {
                 fw.append(String.format("%s\t%s\n", kv.getKey(), kv.getValue()));
             }
         } catch (IOException e) {
@@ -177,9 +214,15 @@ public class Worker {
         }
 
         // 编写完成，告知mater
-        final String callResult = new RpcClient()
-                .call(Cons.MASTER_HOST, "doneReduceTask", new Task[]{task})
-                .toString();
+        String callResult = "";
+        try {
+            callResult = new RpcClient()
+                    .call(masterHost, "doneReduceTask", new Object[]{task,workerDto})
+                    .get()
+                    .toString();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
         if (!"success".equals(callResult)) {
             LogUtil.log("reduce task finished, but master response failed");
         }
@@ -188,7 +231,6 @@ public class Worker {
 
     public static void main(String[] args) throws InterruptedException {
         final Worker worker = new Worker(Cons.MASTER_HOST);
-        worker.work(new MapFuncImpl(), new ReduceFuncImpl());
     }
 
 }

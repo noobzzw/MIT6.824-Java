@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Tuple2 {
-    private String key;
-    private String value;
+public class Tuple2<K,V> {
+    private K key;
+    private V value;
 }

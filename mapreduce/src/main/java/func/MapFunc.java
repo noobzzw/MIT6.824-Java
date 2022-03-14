@@ -11,5 +11,5 @@ public interface MapFunc {
      * @param value 文件内容
      * @return (key,1) list
      */
-    List<Tuple2> doMap(String key, String value);
+    List<Tuple2<String,String>> doMap(String key, String value);
 }
